@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-generator
+  namespace: frontend-ns
+  labels:
+    app: traffic-generator
+    service: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-generator
+  template:
+    metadata:
+      labels:
+        app: traffic-generator
+        service: test
+    spec:
+      containers:
+      - name: traffic-generator
+        image: curlimages/curl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          while true; do
+            echo "Generating traffic..."
+            
+            # Normal requests
+            curl -s http://frontend-service.frontend-ns.svc.cluster.local:3000/ > /dev/null || true
+            sleep 2
+            
+            # Error requests
+            curl -s http://frontend-service.frontend-ns.svc.cluster.local:3000/trigger-error > /dev/null || true
+            sleep 3
+            
+            # Stress test
+            curl -s "http://frontend-service.frontend-ns.svc.cluster.local:3000/stress-test?count=5" > /dev/null || true
+            sleep 5
+            
+            # Direct backend calls
+            curl -s http://backend-service.backend-ns.svc.cluster.local:8080/api/data > /dev/null || true
+            sleep 2
+            
+            # Backend error endpoint
+            curl -s http://backend-service.backend-ns.svc.cluster.local:8080/api/error > /dev/null || true
+            sleep 3
+            
+            # Error generator calls
+            curl -s http://error-generator-service.shared-ns.svc.cluster.local:4000/random-error > /dev/null || true
+            sleep 2
+            
+            echo "Traffic generation cycle complete, waiting 10 seconds..."
+            sleep 10
+          done
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+

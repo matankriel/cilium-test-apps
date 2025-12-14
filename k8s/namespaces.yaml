@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend-ns
+  labels:
+    name: frontend-ns
+    purpose: cilium-testing
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backend-ns
+  labels:
+    name: backend-ns
+    purpose: cilium-testing
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: database-ns
+  labels:
+    name: database-ns
+    purpose: cilium-testing
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shared-ns
+  labels:
+    name: shared-ns
+    purpose: cilium-testing
+

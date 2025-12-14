@@ -1,0 +1,115 @@
+# Example Cilium Network Policies for testing
+# These policies demonstrate different network policy scenarios
+
+---
+# Policy 1: Allow frontend to communicate with backend
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-frontend-to-backend
+  namespace: frontend-ns
+spec:
+  endpointSelector:
+    matchLabels:
+      app: frontend
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app: backend
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app: error-generator
+    toPorts:
+    - ports:
+      - port: "4000"
+        protocol: TCP
+---
+# Policy 2: Allow backend to communicate with database
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-backend-to-database
+  namespace: backend-ns
+spec:
+  endpointSelector:
+    matchLabels:
+      app: backend
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app: postgres
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app: logging-service
+    toPorts:
+    - ports:
+      - port: "5000"
+        protocol: TCP
+---
+# Policy 3: Deny all traffic to database except from backend
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: deny-all-except-backend-to-database
+  namespace: database-ns
+spec:
+  endpointSelector:
+    matchLabels:
+      app: postgres
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app: backend
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+---
+# Policy 4: Allow traffic between services in shared namespace
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-shared-namespace-communication
+  namespace: shared-ns
+spec:
+  endpointSelector: {}
+  ingress:
+  - fromEndpoints:
+    - {}
+    toPorts:
+    - ports:
+      - port: "4000"
+        protocol: TCP
+      - port: "5000"
+        protocol: TCP
+  egress:
+  - toEndpoints:
+    - {}
+    toPorts:
+    - ports:
+      - port: "4000"
+        protocol: TCP
+      - port: "5000"
+        protocol: TCP
+---
+# Policy 5: Deny all egress from traffic-generator (for testing deny policies)
+# Uncomment to test network policy enforcement
+# apiVersion: "cilium.io/v2"
+# kind: CiliumNetworkPolicy
+# metadata:
+#   name: deny-traffic-generator-egress
+#   namespace: frontend-ns
+# spec:
+#   endpointSelector:
+#     matchLabels:
+#       app: traffic-generator
+#   egress: []
+
