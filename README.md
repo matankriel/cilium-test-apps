@@ -77,6 +77,24 @@ The applications generate the following traffic patterns:
 - kubectl configured to access your cluster
 - Docker images built and available (or use a container registry)
 
+### For Disconnected/Air-Gapped Environments
+
+If you're working in a disconnected environment with private Artifactory and GitLab, see:
+- **[Image Build Strategy Guide](IMAGE_BUILD_STRATEGY.md)** - Decide whether to build in public and transfer, or build in private
+- **[Disconnected Environment Setup Guide](DISCONNECTED_ENV_SETUP.md)** - Detailed configuration instructions
+- **[Configuration Checklist](CONFIGURATION_CHECKLIST.md)** - Complete checklist for all configuration points
+
+**Quick Decision:**
+- **Build in public → Transfer:** Recommended for most cases (faster, easier dependency management)
+- **Build in private:** Use when you have strict air-gap requirements or comprehensive private registry
+
+**Quick Configuration Checklist:**
+1. Choose build strategy (see [IMAGE_BUILD_STRATEGY.md](IMAGE_BUILD_STRATEGY.md))
+2. Configure Docker registry mirror or update Dockerfiles with private registry paths
+3. Set `global.imageRegistry` in `helm/cilium-test-apps/values.yaml` to your Artifactory URL
+4. Build and push images to your private registry (or transfer from public environment)
+5. Configure image pull secrets if authentication is required
+
 ## Building Docker Images
 
 Before deploying, you need to build the Docker images for the custom services:
@@ -118,13 +136,51 @@ Then update the image references in the Kubernetes manifests to use your registr
 
 ## Deployment
 
-### Option 1: Deploy Everything at Once
+### Option 1: Deploy with Helm (Recommended)
+
+The Helm chart provides a single `values.yaml` file to configure all services easily.
 
 ```bash
+# Install using default values
+helm install cilium-test-apps ./helm/cilium-test-apps
+
+# Install with custom values file
+helm install cilium-test-apps ./helm/cilium-test-apps -f my-values.yaml
+
+# Install with custom values
+helm install cilium-test-apps ./helm/cilium-test-apps \
+  --set frontend.replicas=3 \
+  --set backend.replicas=3 \
+  --set database.credentials.password=mysecretpassword
+
+# Upgrade existing deployment
+helm upgrade cilium-test-apps ./helm/cilium-test-apps
+
+# Uninstall
+helm uninstall cilium-test-apps
+```
+
+**Customizing Values:**
+
+Edit `helm/cilium-test-apps/values.yaml` to configure:
+- Image repositories and tags
+- Replica counts
+- Resource limits and requests
+- Service ports
+- Environment variables
+- Namespace names
+- Probe settings
+
+See the [Helm Chart README](helm/cilium-test-apps/README.md) for detailed configuration options.
+
+### Option 2: Deploy with kubectl (Direct Manifests)
+
+```bash
+# Deploy everything at once
 kubectl apply -f k8s/all.yaml
 ```
 
-### Option 2: Deploy Step by Step
+### Option 3: Deploy Step by Step
 
 ```bash
 # 1. Create namespaces

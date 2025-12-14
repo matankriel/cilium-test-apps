@@ -1,5 +1,14 @@
 # Quick Start Guide
 
+## For Disconnected Environments
+
+If you're working in an air-gapped environment with private Artifactory and GitLab, see [DISCONNECTED_ENV_SETUP.md](DISCONNECTED_ENV_SETUP.md) first.
+
+**Quick Configuration:**
+1. Set `global.imageRegistry` in `helm/cilium-test-apps/values.yaml` to your Artifactory URL
+2. Build and push images to your private registry
+3. Deploy with Helm
+
 ## Quick Deployment
 
 ```bash

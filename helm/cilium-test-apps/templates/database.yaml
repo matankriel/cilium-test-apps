@@ -1,0 +1,141 @@
+{{- if .Values.database.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: {{ .Values.namespaces.database.name }}
+  labels:
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  POSTGRES_USER: {{ .Values.database.credentials.user }}
+  POSTGRES_PASSWORD: {{ .Values.database.credentials.password }}
+  POSTGRES_DB: {{ .Values.database.credentials.database }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: {{ .Values.namespaces.database.name }}
+  labels:
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+data:
+  init.sql: |
+    -- Initialize database for testing
+    CREATE TABLE IF NOT EXISTS test_data (
+        id SERIAL PRIMARY KEY,
+        service_name VARCHAR(100),
+        message TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS request_logs (
+        id SERIAL PRIMARY KEY,
+        request_id VARCHAR(100),
+        service_name VARCHAR(100),
+        status VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Insert some test data
+    INSERT INTO test_data (service_name, message) VALUES
+        ('backend', 'Initial test data'),
+        ('frontend', 'Initial test data'),
+        ('database', 'Database initialized');
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: {{ .Values.namespaces.database.name }}
+  labels:
+    app: postgres
+    service: database
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.database.replicas }}
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+        service: database
+        {{- include "cilium-test-apps.labels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: postgres
+        image: {{ include "cilium-test-apps.image" (dict "Values" .Values "repository" .Values.database.image.repository "tag" .Values.database.image.tag) }}
+        imagePullPolicy: {{ .Values.database.image.pullPolicy | default .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.database.service.port }}
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_DB
+        volumeMounts:
+        - name: init-sql
+          mountPath: /docker-entrypoint-initdb.d
+        {{- if .Values.database.livenessProbe }}
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U {{ .Values.database.credentials.user }}
+          initialDelaySeconds: {{ .Values.database.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.database.livenessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.database.readinessProbe }}
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U {{ .Values.database.credentials.user }}
+          initialDelaySeconds: {{ .Values.database.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.database.readinessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.database.resources }}
+        resources:
+          {{- toYaml .Values.database.resources | nindent 10 }}
+        {{- end }}
+      volumes:
+      - name: init-sql
+        configMap:
+          name: postgres-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.database.service.name }}
+  namespace: {{ .Values.namespaces.database.name }}
+  labels:
+    app: postgres
+    service: database
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.database.service.type }}
+  ports:
+  - port: {{ .Values.database.service.port }}
+    targetPort: {{ .Values.database.service.port }}
+    protocol: TCP
+    name: postgres
+  selector:
+    app: postgres
+{{- end }}
+

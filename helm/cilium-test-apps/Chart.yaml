@@ -1,0 +1,19 @@
+apiVersion: v2
+name: cilium-test-apps
+description: A Helm chart for Cilium CNI test applications with multi-namespace services
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - cilium
+  - cni
+  - networking
+  - observability
+  - testing
+maintainers:
+  - name: Cilium Test Apps
+# CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+# Update home URL to point to your private GitLab repository
+# Example: "https://gitlab.yourcompany.local/group/cilium-test-apps"
+home: https://github.com/matankriel/cilium-test-apps
+

@@ -1,0 +1,40 @@
+{{- if .Values.namespaces.frontend.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.frontend.name }}
+  labels:
+    name: {{ .Values.namespaces.frontend.name }}
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+{{- end }}
+---
+{{- if .Values.namespaces.backend.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.backend.name }}
+  labels:
+    name: {{ .Values.namespaces.backend.name }}
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+{{- end }}
+---
+{{- if .Values.namespaces.database.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.database.name }}
+  labels:
+    name: {{ .Values.namespaces.database.name }}
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+{{- end }}
+---
+{{- if .Values.namespaces.shared.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.shared.name }}
+  labels:
+    name: {{ .Values.namespaces.shared.name }}
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+{{- end }}
+

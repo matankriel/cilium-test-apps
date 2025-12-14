@@ -4,8 +4,18 @@
 # Usage: ./deploy.sh [options]
 # Options:
 #   --build-images    Build Docker images before deploying
-#   --registry REG    Use registry for images
+#   --registry REG    Use registry for images (CONFIGURATION REQUIRED FOR DISCONNECTED ENV)
 #   --wait           Wait for all pods to be ready
+#
+# ============================================================================
+# AIR-GAPPED / DISCONNECTED ENVIRONMENT CONFIGURATION
+# ============================================================================
+# For disconnected environments:
+# 1. Use --registry flag with your private Artifactory URL
+#    Example: ./deploy.sh --build-images --registry artifactory.yourcompany.local/docker
+# 2. Ensure Helm values.yaml is configured with global.imageRegistry
+# 3. Consider using Helm for deployment instead: helm install cilium-test-apps ./helm/cilium-test-apps
+# ============================================================================
 
 set -e
 

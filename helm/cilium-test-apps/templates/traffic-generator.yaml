@@ -1,0 +1,66 @@
+{{- if .Values.trafficGenerator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-generator
+  namespace: {{ .Values.namespaces.frontend.name }}
+  labels:
+    app: traffic-generator
+    service: test
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.trafficGenerator.replicas }}
+  selector:
+    matchLabels:
+      app: traffic-generator
+  template:
+    metadata:
+      labels:
+        app: traffic-generator
+        service: test
+        {{- include "cilium-test-apps.labels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: traffic-generator
+        image: {{ include "cilium-test-apps.image" (dict "Values" .Values "repository" .Values.trafficGenerator.image.repository "tag" .Values.trafficGenerator.image.tag) }}
+        imagePullPolicy: {{ .Values.trafficGenerator.image.pullPolicy | default .Values.global.imagePullPolicy }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          while true; do
+            echo "Generating traffic..."
+            
+            # Normal requests
+            curl -s http://{{ .Values.frontend.service.name }}.{{ .Values.namespaces.frontend.name }}.svc.cluster.local:{{ .Values.frontend.service.port }}/ > /dev/null || true
+            sleep 2
+            
+            # Error requests
+            curl -s http://{{ .Values.frontend.service.name }}.{{ .Values.namespaces.frontend.name }}.svc.cluster.local:{{ .Values.frontend.service.port }}/trigger-error > /dev/null || true
+            sleep 3
+            
+            # Stress test
+            curl -s "http://{{ .Values.frontend.service.name }}.{{ .Values.namespaces.frontend.name }}.svc.cluster.local:{{ .Values.frontend.service.port }}/stress-test?count=5" > /dev/null || true
+            sleep 5
+            
+            # Direct backend calls
+            curl -s http://{{ .Values.backend.service.name }}.{{ .Values.namespaces.backend.name }}.svc.cluster.local:{{ .Values.backend.service.port }}/api/data > /dev/null || true
+            sleep 2
+            
+            # Backend error endpoint
+            curl -s http://{{ .Values.backend.service.name }}.{{ .Values.namespaces.backend.name }}.svc.cluster.local:{{ .Values.backend.service.port }}/api/error > /dev/null || true
+            sleep 3
+            
+            # Error generator calls
+            curl -s http://{{ .Values.errorGenerator.service.name }}.{{ .Values.namespaces.shared.name }}.svc.cluster.local:{{ .Values.errorGenerator.service.port }}/random-error > /dev/null || true
+            sleep 2
+            
+            echo "Traffic generation cycle complete, waiting 10 seconds..."
+            sleep 10
+          done
+        {{- if .Values.trafficGenerator.resources }}
+        resources:
+          {{- toYaml .Values.trafficGenerator.resources | nindent 10 }}
+        {{- end }}
+{{- end }}
+

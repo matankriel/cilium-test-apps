@@ -1,0 +1,115 @@
+# Example values file for cilium-test-apps
+# Copy this file and customize as needed: cp values.example.yaml my-values.yaml
+#
+# ============================================================================
+# CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+# Set imageRegistry to your private Artifactory registry URL
+# Example: "artifactory.yourcompany.local/docker"
+# ============================================================================
+
+# Global settings
+global:
+  # CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+  # Set this to your private Artifactory registry URL
+  # Example: "artifactory.yourcompany.local/docker" or "registry.gitlab.yourcompany.local"
+  imageRegistry: "your-registry.io"  # Set your container registry here
+  imagePullPolicy: IfNotPresent
+  labels:
+    purpose: cilium-testing
+    environment: production  # Add custom labels
+
+# Namespace configuration
+namespaces:
+  frontend:
+    name: frontend-ns
+    create: true
+  backend:
+    name: backend-ns
+    create: true
+  database:
+    name: database-ns
+    create: true
+  shared:
+    name: shared-ns
+    create: true
+
+# Database configuration
+database:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "15-alpine"
+  replicas: 1
+  credentials:
+    user: postgres
+    password: "changeme"  # Change this!
+    database: testdb
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Backend service configuration
+backend:
+  enabled: true
+  image:
+    repository: backend-service
+    tag: "v1.0.0"  # Use specific version tags
+  replicas: 3  # Scale up for testing
+  env:
+    dbHost: postgres-service.database-ns.svc.cluster.local
+    dbPort: "5432"
+    dbName: testdb
+    dbUser: postgres
+    dbPassword: "changeme"  # Match database password
+    loggingServiceUrl: http://logging-service.shared-ns.svc.cluster.local:5000
+  resources:
+    requests:
+      memory: "256Mi"  # Increased resources
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "1000m"
+
+# Frontend service configuration
+frontend:
+  enabled: true
+  image:
+    repository: frontend-service
+    tag: "v1.0.0"
+  replicas: 3  # Scale up for testing
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "1000m"
+
+# Error generator service configuration
+errorGenerator:
+  enabled: true
+  image:
+    repository: error-generator-service
+    tag: "v1.0.0"
+  replicas: 1
+
+# Logging service configuration
+loggingService:
+  enabled: true
+  image:
+    repository: logging-service
+    tag: "v1.0.0"
+  replicas: 1
+
+# Traffic generator configuration
+trafficGenerator:
+  enabled: true
+  image:
+    repository: curlimages/curl
+    tag: "latest"
+  replicas: 1
+

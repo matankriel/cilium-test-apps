@@ -1,0 +1,32 @@
+Cilium Test Apps Image Transfer Package
+Generated: Sun Dec 14 17:41:03 IST 2025
+Registry: (local - tag with your registry before transfer)
+
+Images included:
+- frontend-service:latest
+- backend-service:latest
+- error-generator-service:latest
+- logging-service:latest
+
+Files:
+- cilium-test-apps-images-20251214-174020.tar.gz
+- cilium-test-apps-images-20251214-174020.tar.gz.sha256
+
+Image Sizes:
+
+
+Transfer Instructions:
+1. Copy all files in this directory to your private environment
+2. Verify checksum: sha256sum -c cilium-test-apps-images-20251214-174020.tar.gz.sha256
+3. Load images: docker load -i cilium-test-apps-images-20251214-174020.tar.gz
+4. Tag images for your registry:
+   docker tag frontend-service:latest <your-registry>/frontend-service:latest
+   docker tag backend-service:latest <your-registry>/backend-service:latest
+   docker tag error-generator-service:latest <your-registry>/error-generator-service:latest
+   docker tag logging-service:latest <your-registry>/logging-service:latest
+5. Push to registry:
+   docker login <your-registry>
+   docker push <your-registry>/frontend-service:latest
+   docker push <your-registry>/backend-service:latest
+   docker push <your-registry>/error-generator-service:latest
+   docker push <your-registry>/logging-service:latest

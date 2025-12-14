@@ -1,0 +1,75 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: {{ .Values.namespaces.frontend.name }}
+  labels:
+    app: frontend
+    service: web
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        service: web
+        {{- include "cilium-test-apps.labels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: frontend
+        image: {{ include "cilium-test-apps.image" (dict "Values" .Values "repository" .Values.frontend.image.repository "tag" .Values.frontend.image.tag) }}
+        imagePullPolicy: {{ .Values.frontend.image.pullPolicy | default .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.frontend.service.port }}
+          name: http
+        env:
+        - name: BACKEND_URL
+          value: {{ .Values.frontend.env.backendUrl }}
+        - name: ERROR_GENERATOR_URL
+          value: {{ .Values.frontend.env.errorGeneratorUrl }}
+        {{- if .Values.frontend.livenessProbe }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.frontend.service.port }}
+          initialDelaySeconds: {{ .Values.frontend.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.frontend.livenessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.frontend.readinessProbe }}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.frontend.service.port }}
+          initialDelaySeconds: {{ .Values.frontend.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.frontend.readinessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.frontend.resources }}
+        resources:
+          {{- toYaml .Values.frontend.resources | nindent 10 }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.frontend.service.name }}
+  namespace: {{ .Values.namespaces.frontend.name }}
+  labels:
+    app: frontend
+    service: web
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+  - port: {{ .Values.frontend.service.port }}
+    targetPort: {{ .Values.frontend.service.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: frontend
+{{- end }}
+

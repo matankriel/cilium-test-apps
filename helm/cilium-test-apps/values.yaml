@@ -1,0 +1,232 @@
+# Default values for cilium-test-apps
+# This is a YAML-formatted file.
+#
+# ============================================================================
+# AIR-GAPPED / DISCONNECTED ENVIRONMENT CONFIGURATION
+# ============================================================================
+# For disconnected environments with private Artifactory/GitLab:
+# 1. Set global.imageRegistry to your private Artifactory registry URL
+#    Example: "artifactory.yourcompany.local/docker"
+# 2. Update all base images (postgres, node, python, golang, curl) to use
+#    your private registry mirror
+# 3. Ensure all application images are pushed to your private registry
+# 4. Set imagePullPolicy to "Always" or "IfNotPresent" based on your policy
+# ============================================================================
+
+# Global settings
+global:
+  # CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+  # Set this to your private Artifactory registry URL
+  # Example: "artifactory.yourcompany.local/docker" or "registry.gitlab.yourcompany.local"
+  # Leave empty for local development or if using public registries
+  imageRegistry: ""
+  
+  # CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+  # Set to "Always" if you want to always pull from registry
+  # Set to "IfNotPresent" to use local images if available
+  # Set to "Never" for fully air-gapped (images must be pre-loaded)
+  imagePullPolicy: IfNotPresent
+  
+  labels:
+    purpose: cilium-testing
+
+# Namespace configuration
+namespaces:
+  frontend:
+    name: frontend-ns
+    create: true
+  backend:
+    name: backend-ns
+    create: true
+  database:
+    name: database-ns
+    create: true
+  shared:
+    name: shared-ns
+    create: true
+
+# Database configuration
+database:
+  enabled: true
+  image:
+    # CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+    # If using a private registry mirror, prefix with registry path
+    # Example: "artifactory.yourcompany.local/docker/postgres" or "postgres" (if global.imageRegistry is set)
+    # Ensure PostgreSQL 15-alpine image is available in your private registry
+    repository: postgres
+    tag: "15-alpine"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    name: postgres-service
+    type: ClusterIP
+    port: 5432
+  credentials:
+    user: postgres
+    password: postgres
+    database: testdb
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# Backend service configuration
+backend:
+  enabled: true
+  image:
+    # CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+    # Set to your private registry path where backend-service image is stored
+    # Example: "artifactory.yourcompany.local/cilium-test-apps/backend-service"
+    # Or use relative path if global.imageRegistry is set: "backend-service"
+    repository: backend-service
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  replicas: 2
+  service:
+    name: backend-service
+    type: ClusterIP
+    port: 8080
+  env:
+    dbHost: postgres-service.database-ns.svc.cluster.local
+    dbPort: "5432"
+    dbName: testdb
+    dbUser: postgres
+    dbPassword: postgres
+    loggingServiceUrl: http://logging-service.shared-ns.svc.cluster.local:5000
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+# Frontend service configuration
+frontend:
+  enabled: true
+  image:
+    # CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+    # Set to your private registry path where frontend-service image is stored
+    # Example: "artifactory.yourcompany.local/cilium-test-apps/frontend-service"
+    # Or use relative path if global.imageRegistry is set: "frontend-service"
+    repository: frontend-service
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  replicas: 2
+  service:
+    name: frontend-service
+    type: ClusterIP
+    port: 3000
+  env:
+    backendUrl: http://backend-service.backend-ns.svc.cluster.local:8080
+    errorGeneratorUrl: http://error-generator-service.shared-ns.svc.cluster.local:4000
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+# Error generator service configuration
+errorGenerator:
+  enabled: true
+  image:
+    # CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+    # Set to your private registry path where error-generator-service image is stored
+    # Example: "artifactory.yourcompany.local/cilium-test-apps/error-generator-service"
+    # Or use relative path if global.imageRegistry is set: "error-generator-service"
+    repository: error-generator-service
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    name: error-generator-service
+    type: ClusterIP
+    port: 4000
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "200m"
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+# Logging service configuration
+loggingService:
+  enabled: true
+  image:
+    # CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+    # Set to your private registry path where logging-service image is stored
+    # Example: "artifactory.yourcompany.local/cilium-test-apps/logging-service"
+    # Or use relative path if global.imageRegistry is set: "logging-service"
+    repository: logging-service
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    name: logging-service
+    type: ClusterIP
+    port: 5000
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "200m"
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+# Traffic generator configuration
+trafficGenerator:
+  enabled: true
+  image:
+    # CONFIGURATION REQUIRED FOR DISCONNECTED ENV:
+    # Set to your private registry mirror for curl image
+    # Example: "artifactory.yourcompany.local/docker/curlimages/curl"
+    # Or use "curlimages/curl" if global.imageRegistry is set
+    # Ensure curl image is available in your private registry
+    repository: curlimages/curl
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      memory: "32Mi"
+      cpu: "50m"
+    limits:
+      memory: "64Mi"
+      cpu: "100m"
+

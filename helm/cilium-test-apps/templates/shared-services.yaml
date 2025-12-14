@@ -1,0 +1,140 @@
+{{- if .Values.errorGenerator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: error-generator
+  namespace: {{ .Values.namespaces.shared.name }}
+  labels:
+    app: error-generator
+    service: error-gen
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.errorGenerator.replicas }}
+  selector:
+    matchLabels:
+      app: error-generator
+  template:
+    metadata:
+      labels:
+        app: error-generator
+        service: error-gen
+        {{- include "cilium-test-apps.labels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: error-generator
+        image: {{ include "cilium-test-apps.image" (dict "Values" .Values "repository" .Values.errorGenerator.image.repository "tag" .Values.errorGenerator.image.tag) }}
+        imagePullPolicy: {{ .Values.errorGenerator.image.pullPolicy | default .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.errorGenerator.service.port }}
+          name: http
+        {{- if .Values.errorGenerator.livenessProbe }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.errorGenerator.service.port }}
+          initialDelaySeconds: {{ .Values.errorGenerator.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.errorGenerator.livenessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.errorGenerator.readinessProbe }}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.errorGenerator.service.port }}
+          initialDelaySeconds: {{ .Values.errorGenerator.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.errorGenerator.readinessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.errorGenerator.resources }}
+        resources:
+          {{- toYaml .Values.errorGenerator.resources | nindent 10 }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.errorGenerator.service.name }}
+  namespace: {{ .Values.namespaces.shared.name }}
+  labels:
+    app: error-generator
+    service: error-gen
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.errorGenerator.service.type }}
+  ports:
+  - port: {{ .Values.errorGenerator.service.port }}
+    targetPort: {{ .Values.errorGenerator.service.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: error-generator
+{{- end }}
+---
+{{- if .Values.loggingService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logging-service
+  namespace: {{ .Values.namespaces.shared.name }}
+  labels:
+    app: logging-service
+    service: logging
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.loggingService.replicas }}
+  selector:
+    matchLabels:
+      app: logging-service
+  template:
+    metadata:
+      labels:
+        app: logging-service
+        service: logging
+        {{- include "cilium-test-apps.labels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: logging-service
+        image: {{ include "cilium-test-apps.image" (dict "Values" .Values "repository" .Values.loggingService.image.repository "tag" .Values.loggingService.image.tag) }}
+        imagePullPolicy: {{ .Values.loggingService.image.pullPolicy | default .Values.global.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.loggingService.service.port }}
+          name: http
+        {{- if .Values.loggingService.livenessProbe }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.loggingService.service.port }}
+          initialDelaySeconds: {{ .Values.loggingService.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.loggingService.livenessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.loggingService.readinessProbe }}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.loggingService.service.port }}
+          initialDelaySeconds: {{ .Values.loggingService.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.loggingService.readinessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.loggingService.resources }}
+        resources:
+          {{- toYaml .Values.loggingService.resources | nindent 10 }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.loggingService.service.name }}
+  namespace: {{ .Values.namespaces.shared.name }}
+  labels:
+    app: logging-service
+    service: logging
+    {{- include "cilium-test-apps.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.loggingService.service.type }}
+  ports:
+  - port: {{ .Values.loggingService.service.port }}
+    targetPort: {{ .Values.loggingService.service.port }}
+    protocol: TCP
+    name: http
+  selector:
+    app: logging-service
+{{- end }}
+
